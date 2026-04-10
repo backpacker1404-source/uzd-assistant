@@ -1,0 +1,1063 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>УЗД Асистент</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #181c27;
+    --surface2: #1e2333;
+    --border: #2a3045;
+    --accent: #4f9cf9;
+    --accent2: #7dd3c0;
+    --text: #e8eaf0;
+    --text-muted: #6b7280;
+    --text-dim: #9ca3af;
+    --success: #34d399;
+    --warning: #fbbf24;
+    --error: #f87171;
+    --radius: 12px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Background grid */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(79,156,249,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(79,156,249,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .app {
+    position: relative;
+    z-index: 1;
+    max-width: 780px;
+    margin: 0 auto;
+    padding: 40px 20px 80px;
+  }
+
+  /* Header */
+  .header {
+    text-align: center;
+    margin-bottom: 48px;
+    animation: fadeDown 0.6s ease both;
+  }
+
+  .header-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(79,156,249,0.1);
+    border: 1px solid rgba(79,156,249,0.25);
+    border-radius: 20px;
+    padding: 4px 14px;
+    font-size: 12px;
+    color: var(--accent);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 20px;
+    font-weight: 500;
+  }
+
+  .header h1 {
+    font-family: 'DM Serif Display', serif;
+    font-size: clamp(28px, 5vw, 42px);
+    font-weight: 400;
+    color: var(--text);
+    line-height: 1.2;
+    margin-bottom: 10px;
+  }
+
+  .header h1 em {
+    font-style: italic;
+    color: var(--accent);
+  }
+
+  .header p {
+    color: var(--text-muted);
+    font-size: 15px;
+    font-weight: 300;
+  }
+
+  /* Card */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 28px;
+    margin-bottom: 16px;
+    animation: fadeUp 0.5s ease both;
+  }
+
+  .card:nth-child(2) { animation-delay: 0.1s; }
+  .card:nth-child(3) { animation-delay: 0.2s; }
+  .card:nth-child(4) { animation-delay: 0.3s; }
+
+  .card-label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .card-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  /* API Key input */
+  .api-input-wrap {
+    position: relative;
+  }
+
+  .api-input-wrap input {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 44px 12px 16px;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.2s;
+    letter-spacing: 0.05em;
+  }
+
+  .api-input-wrap input:focus {
+    border-color: var(--accent);
+  }
+
+  .api-input-wrap input::placeholder { color: var(--text-muted); }
+
+  .toggle-key {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 4px;
+    font-size: 16px;
+    transition: color 0.2s;
+  }
+  .toggle-key:hover { color: var(--accent); }
+
+  .api-hint {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 8px;
+  }
+  .api-hint a { color: var(--accent); text-decoration: none; }
+  .api-hint a:hover { text-decoration: underline; }
+
+  /* Study type selector */
+  .study-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 10px;
+  }
+
+  .study-btn {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 14px;
+    color: var(--text-dim);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .study-btn:hover {
+    border-color: rgba(79,156,249,0.4);
+    color: var(--text);
+    background: rgba(79,156,249,0.06);
+  }
+
+  .study-btn.active {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: rgba(79,156,249,0.1);
+  }
+
+  .study-icon { font-size: 18px; }
+
+  /* Language selector */
+  .lang-row {
+    display: flex;
+    gap: 10px;
+  }
+
+  .lang-btn {
+    flex: 1;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px;
+    color: var(--text-dim);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.2s;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .lang-btn .flag { font-size: 20px; }
+
+  .lang-btn:hover {
+    border-color: rgba(125,211,192,0.4);
+    color: var(--text);
+  }
+
+  .lang-btn.active {
+    border-color: var(--accent2);
+    color: var(--accent2);
+    background: rgba(125,211,192,0.08);
+  }
+
+  /* Upload zone */
+  .upload-zone {
+    border: 2px dashed var(--border);
+    border-radius: 10px;
+    padding: 36px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+    background: var(--surface2);
+  }
+
+  .upload-zone:hover, .upload-zone.drag-over {
+    border-color: var(--accent);
+    background: rgba(79,156,249,0.05);
+  }
+
+  .upload-zone input {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+    width: 100%;
+    height: 100%;
+  }
+
+  .upload-icon {
+    font-size: 36px;
+    margin-bottom: 12px;
+    display: block;
+  }
+
+  .upload-text {
+    font-size: 15px;
+    color: var(--text-dim);
+    margin-bottom: 6px;
+  }
+
+  .upload-text strong { color: var(--accent); }
+
+  .upload-sub {
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+
+  /* Preview */
+  .preview-area {
+    margin-top: 16px;
+    display: none;
+    align-items: flex-start;
+    gap: 14px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px;
+  }
+
+  .preview-area.show { display: flex; }
+
+  .preview-thumb {
+    width: 64px;
+    height: 64px;
+    object-fit: cover;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+
+  .preview-info { flex: 1; min-width: 0; }
+
+  .preview-name {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 4px;
+  }
+
+  .preview-size {
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+
+  .remove-file {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 18px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    transition: all 0.2s;
+    flex-shrink: 0;
+  }
+  .remove-file:hover { color: var(--error); background: rgba(248,113,113,0.1); }
+
+  /* Generate button */
+  .generate-btn {
+    width: 100%;
+    background: linear-gradient(135deg, var(--accent), #3b82f6);
+    border: none;
+    border-radius: var(--radius);
+    padding: 16px;
+    color: white;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 8px;
+    letter-spacing: 0.02em;
+    box-shadow: 0 4px 24px rgba(79,156,249,0.25);
+  }
+
+  .generate-btn:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 32px rgba(79,156,249,0.35);
+  }
+
+  .generate-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  /* Status */
+  .status-box {
+    display: none;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px 24px;
+    margin-top: 16px;
+  }
+
+  .status-box.show { display: block; }
+
+  .status-steps { list-style: none; }
+
+  .status-step {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 0;
+    font-size: 14px;
+    color: var(--text-muted);
+    border-bottom: 1px solid var(--border);
+    transition: color 0.3s;
+  }
+
+  .status-step:last-child { border-bottom: none; }
+
+  .status-step.active { color: var(--text); }
+  .status-step.done { color: var(--success); }
+  .status-step.error { color: var(--error); }
+
+  .step-icon {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    flex-shrink: 0;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+  }
+
+  .status-step.active .step-icon {
+    background: rgba(79,156,249,0.15);
+    border-color: var(--accent);
+    animation: pulse 1.2s ease infinite;
+  }
+
+  .status-step.done .step-icon {
+    background: rgba(52,211,153,0.15);
+    border-color: var(--success);
+  }
+
+  .status-step.error .step-icon {
+    background: rgba(248,113,113,0.15);
+    border-color: var(--error);
+  }
+
+  /* Result */
+  .result-box {
+    display: none;
+    background: linear-gradient(135deg, rgba(52,211,153,0.08), rgba(79,156,249,0.08));
+    border: 1px solid rgba(52,211,153,0.3);
+    border-radius: var(--radius);
+    padding: 24px;
+    margin-top: 16px;
+    text-align: center;
+    animation: fadeUp 0.4s ease both;
+  }
+
+  .result-box.show { display: block; }
+
+  .result-icon { font-size: 40px; margin-bottom: 12px; }
+
+  .result-title {
+    font-family: 'DM Serif Display', serif;
+    font-size: 20px;
+    color: var(--success);
+    margin-bottom: 6px;
+  }
+
+  .result-sub {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-bottom: 20px;
+  }
+
+  .download-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--success);
+    color: #0f1117;
+    border: none;
+    border-radius: 8px;
+    padding: 12px 24px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-decoration: none;
+  }
+
+  .download-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(52,211,153,0.3);
+  }
+
+  .new-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: transparent;
+    color: var(--text-muted);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 24px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-left: 10px;
+  }
+
+  .new-btn:hover { color: var(--text); border-color: var(--text-muted); }
+
+  /* Animations */
+  @keyframes fadeDown {
+    from { opacity: 0; transform: translateY(-20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  .spinner {
+    width: 14px;
+    height: 14px;
+    border: 2px solid rgba(255,255,255,0.3);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    display: none;
+  }
+
+  /* Responsive */
+  @media (max-width: 500px) {
+    .study-grid { grid-template-columns: 1fr 1fr; }
+    .lang-row { gap: 6px; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <div class="header">
+    <div class="header-badge">🩺 УЗД Асистент v1.0</div>
+    <h1>Ултразвукови<br><em>заключения</em></h1>
+    <p>Завантажте сканований бланк — отримайте готовий Word документ</p>
+  </div>
+
+  <!-- API Key -->
+  <div class="card">
+    <div class="card-label">🔑 API Ключ</div>
+    <div class="api-input-wrap">
+      <input type="password" id="apiKey" placeholder="sk-ant-api03-..." autocomplete="off">
+      <button class="toggle-key" onclick="toggleKey()" title="Показати/сховати">👁</button>
+    </div>
+    <div class="api-hint">
+      Отримайте ключ на <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a>.
+      Ключ зберігається лише у вашому браузері.
+    </div>
+  </div>
+
+  <!-- Study type -->
+  <div class="card">
+    <div class="card-label">🔬 Тип дослідження</div>
+    <div class="study-grid">
+      <button class="study-btn active" data-study="abdomen" onclick="selectStudy(this)">
+        <span class="study-icon">🫀</span> Черевна порожнина
+      </button>
+      <button class="study-btn" data-study="thyroid" onclick="selectStudy(this)">
+        <span class="study-icon">🦋</span> Щитовидна залоза
+      </button>
+      <button class="study-btn" data-study="kidneys" onclick="selectStudy(this)">
+        <span class="study-icon">🫘</span> Нирки
+      </button>
+      <button class="study-btn" data-study="pelvis" onclick="selectStudy(this)">
+        <span class="study-icon">🏥</span> Малий таз
+      </button>
+      <button class="study-btn" data-study="heart" onclick="selectStudy(this)">
+        <span class="study-icon">❤️</span> Серце
+      </button>
+      <button class="study-btn" data-study="other" onclick="selectStudy(this)">
+        <span class="study-icon">📋</span> Інше
+      </button>
+    </div>
+  </div>
+
+  <!-- Language -->
+  <div class="card">
+    <div class="card-label">🌐 Мова висновку</div>
+    <div class="lang-row">
+      <button class="lang-btn active" data-lang="BG" onclick="selectLang(this)">
+        <span class="flag">🇧🇬</span> Болгарська
+      </button>
+      <button class="lang-btn" data-lang="UA" onclick="selectLang(this)">
+        <span class="flag">🇺🇦</span> Українська
+      </button>
+      <button class="lang-btn" data-lang="EN" onclick="selectLang(this)">
+        <span class="flag">🇬🇧</span> English
+      </button>
+    </div>
+  </div>
+
+  <!-- Upload -->
+  <div class="card">
+    <div class="card-label">📎 Сканований бланк</div>
+    <div class="upload-zone" id="uploadZone"
+         ondragover="handleDragOver(event)"
+         ondragleave="handleDragLeave(event)"
+         ondrop="handleDrop(event)">
+      <input type="file" id="fileInput" accept="image/*,.pdf" onchange="handleFile(this.files[0])">
+      <span class="upload-icon">📄</span>
+      <div class="upload-text"><strong>Клікніть</strong> або перетягніть файл сюди</div>
+      <div class="upload-sub">JPG, PNG, PDF — фото з телефону або скан</div>
+    </div>
+    <div class="preview-area" id="previewArea">
+      <img class="preview-thumb" id="previewThumb" src="" alt="">
+      <div class="preview-info">
+        <div class="preview-name" id="previewName"></div>
+        <div class="preview-size" id="previewSize"></div>
+      </div>
+      <button class="remove-file" onclick="removeFile()" title="Видалити">✕</button>
+    </div>
+  </div>
+
+  <!-- Generate -->
+  <button class="generate-btn" id="generateBtn" onclick="generate()" disabled>
+    <div class="spinner" id="spinner"></div>
+    <span id="generateLabel">✦ Сформувати висновок</span>
+  </button>
+
+  <!-- Status -->
+  <div class="status-box" id="statusBox">
+    <ul class="status-steps">
+      <li class="status-step" id="step1">
+        <div class="step-icon">1</div>
+        <span>Читання бланку...</span>
+      </li>
+      <li class="status-step" id="step2">
+        <div class="step-icon">2</div>
+        <span>Розпізнавання підкреслень і цифр...</span>
+      </li>
+      <li class="status-step" id="step3">
+        <div class="step-icon">3</div>
+        <span>Формування структурованого висновку...</span>
+      </li>
+      <li class="status-step" id="step4">
+        <div class="step-icon">4</div>
+        <span>Створення Word документу...</span>
+      </li>
+    </ul>
+  </div>
+
+  <!-- Result -->
+  <div class="result-box" id="resultBox">
+    <div class="result-icon">✅</div>
+    <div class="result-title">Висновок готовий!</div>
+    <div class="result-sub" id="resultSub">Документ сформовано успішно</div>
+    <a class="download-btn" id="downloadBtn" href="#" download>
+      ⬇ Завантажити .docx
+    </a>
+    <button class="new-btn" onclick="reset()">↺ Новий</button>
+  </div>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/docx/8.5.0/docx.umd.min.js"></script>
+<script>
+// ── State ──
+let selectedStudy = 'abdomen';
+let selectedLang = 'BG';
+let uploadedFile = null;
+let uploadedBase64 = null;
+let uploadedMime = null;
+
+// ── UI helpers ──
+function selectStudy(btn) {
+  document.querySelectorAll('.study-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  selectedStudy = btn.dataset.study;
+}
+
+function selectLang(btn) {
+  document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  selectedLang = btn.dataset.lang;
+}
+
+function toggleKey() {
+  const inp = document.getElementById('apiKey');
+  inp.type = inp.type === 'password' ? 'text' : 'password';
+}
+
+function checkReady() {
+  const key = document.getElementById('apiKey').value.trim();
+  document.getElementById('generateBtn').disabled = !(key && uploadedFile);
+}
+
+document.getElementById('apiKey').addEventListener('input', checkReady);
+
+// ── File handling ──
+function handleFile(file) {
+  if (!file) return;
+  uploadedFile = file;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const dataUrl = e.target.result;
+    uploadedBase64 = dataUrl.split(',')[1];
+    uploadedMime = file.type || 'image/jpeg';
+
+    const preview = document.getElementById('previewArea');
+    const thumb = document.getElementById('previewThumb');
+    const name = document.getElementById('previewName');
+    const size = document.getElementById('previewSize');
+
+    preview.classList.add('show');
+    if (file.type.startsWith('image/')) {
+      thumb.src = dataUrl;
+      thumb.style.display = 'block';
+    } else {
+      thumb.src = '';
+      thumb.style.display = 'none';
+    }
+    name.textContent = file.name;
+    size.textContent = (file.size / 1024).toFixed(1) + ' KB';
+    checkReady();
+  };
+  reader.readAsDataURL(file);
+}
+
+function removeFile() {
+  uploadedFile = null;
+  uploadedBase64 = null;
+  document.getElementById('previewArea').classList.remove('show');
+  document.getElementById('fileInput').value = '';
+  checkReady();
+}
+
+function handleDragOver(e) {
+  e.preventDefault();
+  document.getElementById('uploadZone').classList.add('drag-over');
+}
+function handleDragLeave(e) {
+  document.getElementById('uploadZone').classList.remove('drag-over');
+}
+function handleDrop(e) {
+  e.preventDefault();
+  document.getElementById('uploadZone').classList.remove('drag-over');
+  const file = e.dataTransfer.files[0];
+  if (file) handleFile(file);
+}
+
+// ── Step UI ──
+function setStep(n, state) {
+  const el = document.getElementById('step' + n);
+  el.className = 'status-step ' + state;
+  const icon = el.querySelector('.step-icon');
+  if (state === 'done') icon.textContent = '✓';
+  else if (state === 'error') icon.textContent = '✕';
+  else if (state === 'active') icon.textContent = '●';
+  else icon.textContent = n;
+}
+
+function resetSteps() {
+  for (let i = 1; i <= 4; i++) setStep(i, '');
+}
+
+// ── Study name map ──
+const studyNames = {
+  BG: { abdomen: 'Коремна кухина', thyroid: 'Щитовидна жлеза', kidneys: 'Бъбреци', pelvis: 'Малък таз', heart: 'Сърце', other: 'Ултразвуково изследване' },
+  UA: { abdomen: 'Черевна порожнина', thyroid: 'Щитовидна залоза', kidneys: 'Нирки', pelvis: 'Малий таз', heart: 'Серце', other: 'Ультразвукове дослідження' },
+  EN: { abdomen: 'Abdominal cavity', thyroid: 'Thyroid gland', kidneys: 'Kidneys', pelvis: 'Pelvis', heart: 'Heart', other: 'Ultrasound examination' }
+};
+
+const langLabels = { BG: 'Болгарська', UA: 'Українська', EN: 'English' };
+
+// ── Main prompt builder ──
+function buildPrompt(lang, study) {
+  const langInstructions = {
+    BG: 'Respond ONLY in Bulgarian language.',
+    UA: 'Respond ONLY in Ukrainian language.',
+    EN: 'Respond ONLY in English language.'
+  };
+
+  return `You are a medical document AI assistant. Analyze the uploaded ultrasound examination form image.
+
+${langInstructions[lang]}
+
+Your task:
+1. Identify ALL underlined words/values in the form (these are the selected options)
+2. Extract ALL handwritten numbers and measurements
+3. Extract any handwritten conclusion/notes text
+4. Return ONLY a JSON object — no markdown, no explanation, no extra text.
+
+JSON structure:
+{
+  "study_type": "${study}",
+  "language": "${lang}",
+  "date": "extracted date or empty string",
+  "age": "extracted age or empty string",
+  "parameters": [
+    {"label": "parameter name in ${lang}", "value": "selected value(s) and measurements"}
+  ],
+  "pathological_findings": [
+    {"label": "finding label", "value": "description"}
+  ],
+  "conclusion": "handwritten conclusion text if present, or empty string"
+}
+
+Rules:
+- Only include underlined/selected values, NOT the full list of options
+- Include ALL numeric measurements with units
+- Keep parameter labels in ${lang} language
+- For pathological findings: include each separately with location and ACR/TI-RADS if present
+- If conclusion is handwritten, transcribe it exactly (convert to typed text)`;
+}
+
+// ── API call ──
+async function callClaude(apiKey, prompt, base64, mime) {
+  const response = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true'
+    },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 2000,
+      messages: [{
+        role: 'user',
+        content: [
+          { type: 'image', source: { type: 'base64', media_type: mime, data: base64 } },
+          { type: 'text', text: prompt }
+        ]
+      }]
+    })
+  });
+
+  if (!response.ok) {
+    const err = await response.json();
+    throw new Error(err.error?.message || 'API error ' + response.status);
+  }
+
+  const data = await response.json();
+  const text = data.content.map(b => b.text || '').join('');
+  const clean = text.replace(/```json|```/g, '').trim();
+  return JSON.parse(clean);
+}
+
+// ── DOCX builder ──
+async function buildDocx(data, lang) {
+  const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell,
+          AlignmentType, BorderStyle, WidthType, ShadingType } = docx;
+
+  const border = { style: BorderStyle.SINGLE, size: 1, color: 'CCCCCC' };
+  const borders = { top: border, bottom: border, left: border, right: border };
+  const noBorder = { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' };
+  const noBorders = { top: noBorder, bottom: noBorder, left: noBorder, right: noBorder };
+
+  const studyTitle = studyNames[lang][data.study_type] || data.study_type;
+
+  const labels = {
+    BG: { title: 'Кабинет за ултразвукова диагностика', subtitle: 'УЛТРАЗВУКОВО ИЗСЛЕДВАНЕ', date: 'Дата:', patient: 'И.Пр.Ф.:', age: 'Възраст:', patientPlaceholder: '_________________________ (попълва се от лекаря)', params: studyTitle.toUpperCase(), findings: 'ПАТОЛОГИЧНИ ОБРАЗУВАНИЯ', conclusion: 'ЗАКЛЮЧЕНИЕ И ПРЕПОРЪКИ', doctor: 'Лекар: _____________________' },
+    UA: { title: 'Кабінет ультразвукової діагностики', subtitle: 'УЛЬТРАЗВУКОВЕ ДОСЛІДЖЕННЯ', date: 'Дата:', patient: 'П.І.Б.:', age: 'Вік:', patientPlaceholder: '_________________________ (заповнює лікар)', params: studyTitle.toUpperCase(), findings: 'ПАТОЛОГІЧНІ УТВОРЕННЯ', conclusion: 'ВИСНОВОК ТА РЕКОМЕНДАЦІЇ', doctor: 'Лікар: _____________________' },
+    EN: { title: 'Ultrasound Diagnostic Center', subtitle: 'ULTRASOUND EXAMINATION', date: 'Date:', patient: 'Patient name:', age: 'Age:', patientPlaceholder: '_________________________ (to be filled by physician)', params: studyTitle.toUpperCase(), findings: 'PATHOLOGICAL FINDINGS', conclusion: 'CONCLUSION & RECOMMENDATIONS', doctor: 'Physician: _____________________' }
+  }[lang];
+
+  function sectionHeader(text) {
+    return new Paragraph({
+      spacing: { before: 160, after: 60 },
+      children: [new TextRun({ text, bold: true, size: 22, font: 'Arial', color: '1F4E79' })]
+    });
+  }
+
+  function dataRow(label, value) {
+    return new TableRow({
+      children: [
+        new TableCell({
+          borders, width: { size: 4200, type: WidthType.DXA },
+          margins: { top: 60, bottom: 60, left: 120, right: 120 },
+          shading: { fill: 'F2F7FC', type: ShadingType.CLEAR },
+          children: [new Paragraph({ children: [new TextRun({ text: label, bold: true, size: 20, font: 'Arial' })] })]
+        }),
+        new TableCell({
+          borders, width: { size: 5160, type: WidthType.DXA },
+          margins: { top: 60, bottom: 60, left: 120, right: 120 },
+          children: [new Paragraph({ children: [new TextRun({ text: value, size: 20, font: 'Arial' })] })]
+        })
+      ]
+    });
+  }
+
+  function makeTable(rows) {
+    return new Table({
+      width: { size: 9360, type: WidthType.DXA },
+      columnWidths: [4200, 5160],
+      rows: rows.map(([l, v]) => dataRow(l, v))
+    });
+  }
+
+  const children = [
+    // Title
+    new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 80 },
+      children: [new TextRun({ text: labels.title, bold: true, size: 28, font: 'Arial', color: '1F4E79' })] }),
+    new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 200 },
+      children: [new TextRun({ text: labels.subtitle, bold: true, size: 24, font: 'Arial', color: '1F4E79' })] }),
+
+    // Patient info
+    new Table({
+      width: { size: 9360, type: WidthType.DXA },
+      columnWidths: [1800, 5760, 1800],
+      rows: [
+        new TableRow({ children: [
+          new TableCell({ borders: noBorders, width: { size: 1800, type: WidthType.DXA }, margins: { top: 60, bottom: 60, left: 0, right: 120 },
+            children: [new Paragraph({ children: [new TextRun({ text: labels.date, bold: true, size: 20, font: 'Arial' })] })] }),
+          new TableCell({ borders: { top: noBorder, left: noBorder, right: noBorder, bottom: border }, width: { size: 5760, type: WidthType.DXA }, margins: { top: 60, bottom: 60, left: 120, right: 120 },
+            children: [new Paragraph({ children: [new TextRun({ text: data.date || '', size: 20, font: 'Arial' })] })] }),
+          new TableCell({ borders: noBorders, width: { size: 1800, type: WidthType.DXA }, margins: { top: 60, bottom: 60, left: 120, right: 0 },
+            children: [new Paragraph({ children: [new TextRun({ text: labels.age + ' ' + (data.age || ''), size: 20, font: 'Arial' })] })] }),
+        ]}),
+        new TableRow({ children: [
+          new TableCell({ borders: noBorders, width: { size: 1800, type: WidthType.DXA }, margins: { top: 60, bottom: 60, left: 0, right: 120 },
+            children: [new Paragraph({ children: [new TextRun({ text: labels.patient, bold: true, size: 20, font: 'Arial' })] })] }),
+          new TableCell({ borders: { top: noBorder, left: noBorder, right: noBorder, bottom: border }, width: { size: 7560, type: WidthType.DXA }, colSpan: 2, margins: { top: 60, bottom: 60, left: 120, right: 0 },
+            children: [new Paragraph({ children: [new TextRun({ text: labels.patientPlaceholder, size: 20, font: 'Arial', color: '999999' })] })] }),
+        ]}),
+      ]
+    }),
+
+    new Paragraph({ spacing: { after: 160 }, children: [] }),
+
+    // Parameters
+    sectionHeader(labels.params),
+    makeTable(data.parameters.map(p => [p.label, p.value])),
+  ];
+
+  // Pathological findings
+  if (data.pathological_findings && data.pathological_findings.length > 0) {
+    children.push(new Paragraph({ spacing: { after: 120 }, children: [] }));
+    children.push(sectionHeader(labels.findings));
+    children.push(makeTable(data.pathological_findings.map(f => [f.label, f.value])));
+  }
+
+  children.push(new Paragraph({ spacing: { after: 200 }, children: [] }));
+
+  // Conclusion
+  children.push(new Paragraph({
+    spacing: { before: 160, after: 80 },
+    border: { top: { style: BorderStyle.SINGLE, size: 6, color: '1F4E79', space: 1 } },
+    children: [new TextRun({ text: labels.conclusion, bold: true, size: 24, font: 'Arial', color: '1F4E79' })]
+  }));
+
+  if (data.conclusion && data.conclusion.trim()) {
+    children.push(new Paragraph({ spacing: { after: 80 },
+      children: [new TextRun({ text: data.conclusion, size: 20, font: 'Arial' })] }));
+  } else {
+    children.push(new Paragraph({ spacing: { after: 120 }, children: [] }));
+    children.push(new Paragraph({ spacing: { after: 120 }, children: [] }));
+    children.push(new Paragraph({ spacing: { after: 120 }, children: [] }));
+  }
+
+  // Signature
+  children.push(new Table({
+    width: { size: 9360, type: WidthType.DXA }, columnWidths: [5000, 4360],
+    rows: [new TableRow({ children: [
+      new TableCell({ borders: noBorders, width: { size: 5000, type: WidthType.DXA }, children: [new Paragraph({ children: [] })] }),
+      new TableCell({ borders: noBorders, width: { size: 4360, type: WidthType.DXA },
+        children: [new Paragraph({ children: [new TextRun({ text: labels.doctor, size: 20, font: 'Arial' })] })] }),
+    ]})]
+  }));
+
+  const doc = new Document({
+    styles: { default: { document: { run: { font: 'Arial', size: 20 } } } },
+    sections: [{ properties: { page: { size: { width: 11906, height: 16838 }, margin: { top: 1000, right: 1000, bottom: 1000, left: 1000 } } }, children }]
+  });
+
+  return await Packer.toBlob(doc);
+}
+
+// ── Main generate flow ──
+async function generate() {
+  const apiKey = document.getElementById('apiKey').value.trim();
+  if (!apiKey || !uploadedFile) return;
+
+  // UI: loading state
+  const btn = document.getElementById('generateBtn');
+  const label = document.getElementById('generateLabel');
+  const spinner = document.getElementById('spinner');
+  btn.disabled = true;
+  label.textContent = 'Обробка...';
+  spinner.style.display = 'block';
+
+  document.getElementById('statusBox').classList.add('show');
+  document.getElementById('resultBox').classList.remove('show');
+  resetSteps();
+
+  try {
+    // Step 1 & 2: call Claude
+    setStep(1, 'active');
+    await delay(400);
+    setStep(1, 'done');
+    setStep(2, 'active');
+
+    const prompt = buildPrompt(selectedLang, selectedStudy);
+    const extractedData = await callClaude(apiKey, prompt, uploadedBase64, uploadedMime);
+
+    setStep(2, 'done');
+    setStep(3, 'active');
+    await delay(300);
+    setStep(3, 'done');
+
+    // Step 4: build docx
+    setStep(4, 'active');
+    const blob = await buildDocx(extractedData, selectedLang);
+    setStep(4, 'done');
+
+    // Show result
+    const url = URL.createObjectURL(blob);
+    const studyName = studyNames[selectedLang][selectedStudy] || selectedStudy;
+    const filename = `УЗД_${studyName}_${selectedLang}.docx`;
+
+    document.getElementById('downloadBtn').href = url;
+    document.getElementById('downloadBtn').download = filename;
+    document.getElementById('resultSub').textContent = filename;
+    document.getElementById('resultBox').classList.add('show');
+
+  } catch (err) {
+    const currentActive = document.querySelector('.status-step.active');
+    if (currentActive) currentActive.className = 'status-step error';
+    console.error(err);
+    alert('Помилка: ' + err.message);
+  } finally {
+    btn.disabled = false;
+    label.textContent = '✦ Сформувати висновок';
+    spinner.style.display = 'none';
+    checkReady();
+  }
+}
+
+function reset() {
+  removeFile();
+  document.getElementById('statusBox').classList.remove('show');
+  document.getElementById('resultBox').classList.remove('show');
+  resetSteps();
+}
+
+function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
+</script>
+</body>
+</html>
