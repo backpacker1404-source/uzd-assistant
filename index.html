@@ -274,6 +274,115 @@ const studyNames = {
 
 function buildPrompt(lang, study) {
   const langInstr = { BG:'Respond ONLY in Bulgarian.', UA:'Respond ONLY in Ukrainian.', EN:'Respond ONLY in English.' };
+
+  if (study === 'abdomen') {
+    return `You are a medical document parser for ultrasound reports.
+Analyze the uploaded scanned Bulgarian ultrasound form for abdominal organs.
+
+Your task:
+1. Identify ONLY the underlined words and handwritten numbers/values
+2. Ignore all non-underlined text variants
+3. Return ONLY valid JSON — no markdown, no explanation, no backticks
+
+CRITICAL RULES for recognition:
+- Underlined text means SELECTED — include it
+- Non-underlined text means NOT selected — exclude it
+- For handwritten numbers: read carefully, include units (мм, см²)
+- Multiple underlined options on same line: join with ", "
+- If option is NOT underlined: do not include it
+- Empty field (nothing underlined/written): use ""
+
+Return this exact JSON structure:
+{
+  "study_type": "abdomen",
+  "language": "${lang}",
+  "date": "",
+  "age": "",
+  "sections": [
+    {
+      "title": "ЧЕРЕН ДРОБ",
+      "rows": [
+        {"param": "КВР на десния лоб", "value": ""},
+        {"param": "Дебелина на левия лоб", "value": ""},
+        {"param": "Ъгъл на десния лоб", "value": ""},
+        {"param": "Ъгъл на левия лоб", "value": ""},
+        {"param": "Очертания", "value": ""},
+        {"param": "Ехогенност на паренхима", "value": ""},
+        {"param": "Ехоструктура на паренхима", "value": ""},
+        {"param": "Съдов рисунък", "value": ""},
+        {"param": "Намаляване към периферията", "value": ""},
+        {"param": "Долна куха вена", "value": ""},
+        {"param": "Чернодробни вени", "value": ""},
+        {"param": "Портална вена", "value": ""},
+        {"param": "Интрахепатални канали", "value": ""},
+        {"param": "Стени на каналите", "value": ""},
+        {"param": "Ехогенност на стените", "value": ""},
+        {"param": "Признаци на затихване", "value": ""},
+        {"param": "Обемни формации", "value": ""}
+      ]
+    },
+    {
+      "title": "ЖЛЪЧЕН МЕХУР",
+      "rows": [
+        {"param": "Очертания", "value": ""},
+        {"param": "Положение", "value": ""},
+        {"param": "Форма", "value": ""},
+        {"param": "Дължина", "value": ""},
+        {"param": "Ширина", "value": ""},
+        {"param": "Стени", "value": ""},
+        {"param": "Ехогенност на стените", "value": ""},
+        {"param": "Прегъвания / стеснения", "value": ""},
+        {"param": "Съдържание", "value": ""},
+        {"param": "Конкременти / включвания", "value": ""},
+        {"param": "Общ жлъчен канал", "value": ""},
+        {"param": "Стени на канала", "value": ""}
+      ]
+    },
+    {
+      "title": "ПАНКРЕАС",
+      "rows": [
+        {"param": "Очертания", "value": ""},
+        {"param": "Глава", "value": ""},
+        {"param": "Тяло", "value": ""},
+        {"param": "Опашка", "value": ""},
+        {"param": "Вирсунгов канал", "value": ""},
+        {"param": "Ехогенност на паренхима", "value": ""},
+        {"param": "Ехоструктура на паренхима", "value": ""},
+        {"param": "Обемни формации", "value": ""}
+      ]
+    },
+    {
+      "title": "СЛЕЗКА",
+      "rows": [
+        {"param": "Очертания", "value": ""},
+        {"param": "Размери", "value": ""},
+        {"param": "Площ", "value": ""},
+        {"param": "Ехоструктура", "value": ""},
+        {"param": "Ехогенност", "value": ""},
+        {"param": "Хилус", "value": ""},
+        {"param": "Слезкова вена", "value": ""},
+        {"param": "Обемни формации", "value": ""}
+      ]
+    },
+    {
+      "title": "ПАТОЛОГИЧНИ ОБРАЗУВАНИЯ",
+      "rows": [
+        {"param": "Описание", "value": ""}
+      ]
+    }
+  ],
+  "conclusion": ""
+}
+
+For "ПАТОЛОГИЧНИ ОБРАЗУВАНИЯ":
+- Summarize ONLY findings that deviate from normal
+- Write in Bulgarian, concise clinical style
+- If everything is normal: use ""
+
+Return ONLY the JSON object, nothing else.`;
+  }
+
+  // Default prompt for all other study types
   return `You are a medical ultrasound report assistant. Analyze the uploaded scanned form image.
 ${langInstr[lang]}
 Extract ONLY underlined/selected words and all handwritten numbers/measurements.
@@ -456,8 +565,29 @@ async function buildDocx(data, lang) {
     // Try to split right/left from params
     children.push(secHdr(studyTitle.toUpperCase()));
     children.push(mkTable(params.map(p=>[p.label,p.value])));
+  } else if (data.study_type === 'abdomen' && data.sections) {
+    // Abdomen: render section by section
+    const pathoTitle = lang==='BG'?'ПАТОЛОГИЧНИ ОБРАЗУВАНИЯ':lang==='UA'?'ПАТОЛОГІЧНІ УТВОРЕННЯ':'PATHOLOGICAL FINDINGS';
+    data.sections.forEach(sec => {
+      if (sec.title === pathoTitle || sec.title === 'ПАТОЛОГИЧНИ ОБРАЗУВАНИЯ') return; // rendered separately below
+      children.push(secHdr(sec.title));
+      const validRows = sec.rows.filter(r => r.value && r.value.trim() !== '');
+      if (validRows.length > 0) {
+        children.push(mkTable(validRows.map(r=>[r.param, r.value])));
+      }
+    });
+    // Render pathological findings section
+    const pathoSec = data.sections.find(s => s.title === 'ПАТОЛОГИЧНИ ОБРАЗУВАНИЯ');
+    if (pathoSec) {
+      const pathoRows = pathoSec.rows.filter(r => r.value && r.value.trim() !== '');
+      if (pathoRows.length > 0) {
+        children.push(new Paragraph({spacing:{after:120},children:[]}));
+        children.push(secHdr('ПАТОЛОГИЧНИ ОБРАЗУВАНИЯ'));
+        children.push(mkTable(pathoRows.map(r=>[r.param, r.value])));
+      }
+    }
   } else {
-    // Default: abdomen, kidneys, prostate, other
+    // Default: kidneys, prostate, other
     children.push(secHdr(studyTitle.toUpperCase()));
     children.push(mkTable(params.map(p=>[p.label,p.value])));
   }
